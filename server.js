@@ -16,7 +16,9 @@ app.get('/', (req, res) => {
 app.post('/api/create-charge', async (req, res) => {
   try {
     const { driverPhone, amount } = req.body;
-    if (!driverPhone || !amount) return res.status(400).json({ error: 'بيانات ناقصة' });
+    if (!driverPhone || !amount) {
+      return res.status(400).json({ error: 'بيانات ناقصة: الهاتف أو المبلغ' });
+    }
 
     const response = await axios.post(`${SHA7NAWY_BASE_URL}/payments/create`, {
       amount: parseFloat(amount),
@@ -31,10 +33,16 @@ app.post('/api/create-charge', async (req, res) => {
       }
     });
 
-    const paymentUrl = response.data?.payment_url || response.data?.data?.payment_url;
-    res.json({ success: true, paymentUrl });
+    const paymentUrl = response.data?.payment_url || response.data?.data?.payment_url || response.data?.url;
+    res.json({ success: true, paymentUrl, raw: response.data });
   } catch (err) {
-    res.status(500).json({ error: 'فشل إنشاء الدفع' });
+    // إرجاع رسالة الخطأ القادمة من شحنناوي مباشرة
+    const errorDetails = err.response ? err.response.data : err.message;
+    console.error('Sha7nawy Error:', errorDetails);
+    res.status(500).json({
+      error: 'فشل إنشاء الدفع',
+      details: errorDetails
+    });
   }
 });
 
